@@ -1,6 +1,8 @@
 # AQS — Agile Quick Search
 
-A fast CLI tool to fuzzy-search your shell command history using `fzf`. Find and re-run recent commands instantly.
+A blazing-fast CLI tool to fuzzy-search your shell command history using `fzf`. Find and re-run recent commands instantly.
+
+**Written in Go for maximum performance** ⚡
 
 ## Features
 
@@ -8,7 +10,8 @@ A fast CLI tool to fuzzy-search your shell command history using `fzf`. Find and
 - ⚡ Smart sorting prioritizes exact and prefix matches
 - 🚀 Opens interactive fzf picker
 - ▶️ Executes selected command automatically (or use `-d` for dry-run)
-- 📦 Single binary, no dependencies at runtime (except `fzf`)
+- 📦 Single binary, no runtime dependencies (except `fzf`)
+- 🏎️ Instant startup (native Go binary)
 
 ## Installation
 
@@ -42,8 +45,13 @@ curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-macos-amd
 chmod +x aqs
 sudo mv aqs /usr/local/bin/
 
-# Linux
+# Linux (x86_64)
 curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-linux-amd64 -o aqs
+chmod +x aqs
+sudo mv aqs /usr/local/bin/
+
+# Linux (ARM64)
+curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-linux-arm64 -o aqs
 chmod +x aqs
 sudo mv aqs /usr/local/bin/
 
@@ -51,18 +59,19 @@ sudo mv aqs /usr/local/bin/
 Invoke-WebRequest -Uri https://github.com/amantham20/aqs/releases/latest/download/aqs-windows-amd64.exe -OutFile aqs.exe
 ```
 
-### Install via pip
-
-```bash
-pip install git+https://github.com/amantham20/aqs.git
-```
-
-### Install from source
+### Install from source (Go)
 
 ```bash
 git clone https://github.com/amantham20/aqs.git
 cd aqs
-pip install -e .
+make install
+```
+
+Or build manually:
+
+```bash
+go build -ldflags="-s -w" -o aqs .
+sudo mv aqs /usr/local/bin/
 ```
 
 ## Usage
@@ -81,7 +90,7 @@ aqs git -d
 
 ## Options
 
-```
+```text
 Usage: aqs [OPTIONS] [QUERY]
 
   AQS — fuzzy search recent commands.
@@ -104,12 +113,14 @@ Options:
 Add an alias or keybinding for quick access:
 
 ### Bash/Zsh
+
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
 alias h='aqs'
 ```
 
 ### Fish
+
 ```fish
 # Add to ~/.config/fish/config.fish
 alias h='aqs'

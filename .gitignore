@@ -1,4 +1,9 @@
-# Python
+# Go
+/aqs
+aqs-*
+*.exe
+
+# Python (deprecated)
 __pycache__/
 *.py[cod]
 *$py.class
