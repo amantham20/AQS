@@ -1,0 +1,122 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: aqs
+            asset_name: aqs-linux-amd64
+          - os: macos-latest
+            artifact_name: aqs
+            asset_name: aqs-macos-amd64
+          - os: macos-14
+            artifact_name: aqs
+            asset_name: aqs-macos-arm64
+          - os: windows-latest
+            artifact_name: aqs.exe
+            asset_name: aqs-windows-amd64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller click rapidfuzz
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name aqs aqs_cli.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          cp artifacts/aqs-linux-amd64/aqs release/aqs-linux-amd64
+          cp artifacts/aqs-macos-amd64/aqs release/aqs-macos-amd64
+          cp artifacts/aqs-macos-arm64/aqs release/aqs-macos-arm64
+          cp artifacts/aqs-windows-amd64.exe/aqs.exe release/aqs-windows-amd64.exe
+          chmod +x release/aqs-*
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/aqs-linux-amd64
+            release/aqs-macos-amd64
+            release/aqs-macos-arm64
+            release/aqs-windows-amd64.exe
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            **Prerequisites:** Install [fzf](https://github.com/junegunn/fzf) first (`brew install fzf` or `apt install fzf`)
+
+            ### macOS (Apple Silicon)
+            ```bash
+            curl -L https://github.com/amantham20/AQS/releases/latest/download/aqs-macos-arm64 -o aqs
+            chmod +x aqs
+            sudo mv aqs /usr/local/bin/
+            ```
+
+            ### macOS (Intel)
+            ```bash
+            curl -L https://github.com/amantham20/AQS/releases/latest/download/aqs-macos-amd64 -o aqs
+            chmod +x aqs
+            sudo mv aqs /usr/local/bin/
+            ```
+
+            ### Linux
+            ```bash
+            curl -L https://github.com/amantham20/AQS/releases/latest/download/aqs-linux-amd64 -o aqs
+            chmod +x aqs
+            sudo mv aqs /usr/local/bin/
+            ```
+
+            ### Windows (PowerShell)
+            ```powershell
+            Invoke-WebRequest -Uri https://github.com/amantham20/AQS/releases/latest/download/aqs-windows-amd64.exe -OutFile aqs.exe
+            # Move to a directory in your PATH
+            ```
+
+            ## Usage
+            ```bash
+            aqs           # Open fzf picker, execute selected command
+            aqs git       # Pre-filter for "git" commands
+            aqs -d        # Dry-run (print only, don't execute)
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

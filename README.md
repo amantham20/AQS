@@ -1,58 +1,120 @@
-# AQS — Agile Quick Search (cli)
+# AQS — Agile Quick Search
 
-AQS is a tiny CLI tool to fuzzy-search your recent shell command history (bash, zsh, fish). It tries to behave like `fzf` for quickly finding recent commands. If the `fzf` binary is present it uses it for the interactive picker; otherwise it falls back to a simple fuzzy-score-based search using Python.
+A fast CLI tool to fuzzy-search your shell command history using `fzf`. Find and re-run recent commands instantly.
 
-Features
-- Reads from common shell histories (`.bash_history`, `.zsh_history`, fish history).
-- Shows recent commands first (deduplicated to prefer most recent occurrences).
-- Uses `fzf` when available for an interactive selection; otherwise uses `rapidfuzz` to score and list matches.
-- Prints the chosen command so you can `eval $(aqs)` or copy it to clipboard.
+## Features
 
-Installation (quick)
+- 🔍 Fuzzy search through bash, zsh, and fish history
+- ⚡ Smart sorting prioritizes exact and prefix matches
+- 🚀 Opens interactive fzf picker
+- ▶️ Executes selected command automatically (or use `-d` for dry-run)
+- 📦 Single binary, no dependencies at runtime (except `fzf`)
 
-1. Create a virtualenv and install deps:
+## Installation
 
-```fish
-python -m venv .venv
-source .venv/bin/activate.fish
-pip install -r requirements.txt
+### Prerequisites
+
+You need `fzf` installed:
+
+```bash
+# macOS
+brew install fzf
+
+# Ubuntu/Debian
+sudo apt install fzf
+
+# Arch
+sudo pacman -S fzf
 ```
 
-2. Make the script executable and put it on your PATH (optional):
+### Download Binary
 
-```fish
+Download the latest release for your platform from the [Releases](https://github.com/amantham20/aqs/releases) page.
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-macos-arm64 -o aqs
 chmod +x aqs
-mv aqs /usr/local/bin/aqs
+sudo mv aqs /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-macos-amd64 -o aqs
+chmod +x aqs
+sudo mv aqs /usr/local/bin/
+
+# Linux
+curl -L https://github.com/amantham20/aqs/releases/latest/download/aqs-linux-amd64 -o aqs
+chmod +x aqs
+sudo mv aqs /usr/local/bin/
+
+# Windows (PowerShell)
+Invoke-WebRequest -Uri https://github.com/amantham20/aqs/releases/latest/download/aqs-windows-amd64.exe -OutFile aqs.exe
 ```
 
-Usage
-
-Basic interactive (uses `fzf` if installed):
+### Install via pip
 
 ```bash
+pip install git+https://github.com/amantham20/aqs.git
+```
+
+### Install from source
+
+```bash
+git clone https://github.com/amantham20/aqs.git
+cd aqs
+pip install -e .
+```
+
+## Usage
+
+```bash
+# Open fzf with all history, execute selected command
 aqs
-# select a command; it will be printed to stdout
-# run it in your shell with: eval "$(aqs)"
+
+# Pre-filter with a query (e.g., find git commands)
+aqs git
+
+# Dry-run: print selected command without executing
+aqs -d
+aqs git -d
 ```
 
-Search without `fzf` (fallback):
+## Options
 
+```
+Usage: aqs [OPTIONS] [QUERY]
+
+  AQS — fuzzy search recent commands.
+
+Options:
+  -d, --dry-run  Dry run: print selected command without executing
+  --help         Show this message and exit.
+```
+
+## How It Works
+
+1. Reads history from `~/.bash_history`, `~/.zsh_history`, and fish history
+2. Deduplicates commands (keeping most recent occurrence)
+3. If a query is provided, pre-sorts by similarity (exact > prefix > substring > fuzzy)
+4. Opens `fzf` for interactive selection
+5. Executes the selected command (unless `-d` flag is used)
+
+## Shell Integration
+
+Add an alias or keybinding for quick access:
+
+### Bash/Zsh
 ```bash
-aqs -q git
-# prints top fuzzy matches for 'git'
+# Add to ~/.bashrc or ~/.zshrc
+alias h='aqs'
 ```
 
-Options
-- `-s, --shell` : prefer a specific shell history (`bash`, `zsh`, `fish`).
-- `-n, --num` : number of history lines to consider (default: 1000).
-- `-q, --query` : non-interactive query to list results.
-- `-c, --copy` : copy selected/printed command to clipboard (macOS `pbcopy`).
+### Fish
+```fish
+# Add to ~/.config/fish/config.fish
+alias h='aqs'
+```
 
-Notes
-- The script prints the selected command to stdout. It cannot directly run it in your current shell; use `eval "$(aqs)"` or paste it.
+## License
 
-Contributing / Next steps
-- Add live interactive fallback with `prompt_toolkit`.
-- Add shell integration helpers in `shell/` directory (aliases/functions).
-
-License: MIT style (use as you like)
+MIT
