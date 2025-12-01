@@ -1,0 +1,9 @@
+# AQC Command File
+# Format:
+# command
+# - Name: Description
+# ---
+
+ls
+- lists files
+---

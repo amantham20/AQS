@@ -15,18 +15,55 @@ import (
 
 const maxLines = 1000
 
+const aqcFileName = ".commands.aqc"
+
+const Version = "1.0.0"
+
+func printVersion() {
+	fmt.Printf("AQS - Aman's Quick Search Tool %s\n", Version)
+
+	out := `
+            __
+           / _)
+    .-^^^-/ /
+ __/       /
+<__.|_|-|_|
+`
+	fmt.Println(out)
+	fmt.Println("Developed by Aman Dhruva Thamminana")
+	fmt.Println("Help me with feedback at thammina@msu.edu or contribute at https://github.com/amantham20/AQS")
+}
+
 func main() {
 	dryRun := flag.Bool("d", false, "Dry run: print selected command without executing")
 	flag.BoolVar(dryRun, "dry-run", false, "Dry run: print selected command without executing")
+	addAQC := flag.Bool("a", false, "Add a command to the AQC file in current directory")
+	flag.BoolVar(addAQC, "add", false, "Add a command to the AQC file in current directory")
+	showVersion := flag.Bool("v", false, "Show version")
+	flag.BoolVar(showVersion, "version", false, "Show version")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "AQS — fuzzy search recent commands\n\n")
 		fmt.Fprintf(os.Stderr, "Usage: aqs [options] [query]\n\n")
 		fmt.Fprintf(os.Stderr, "Opens fzf picker and executes the selected command.\n")
-		fmt.Fprintf(os.Stderr, "Use -d/--dry-run to only print without executing.\n\n")
+		fmt.Fprintf(os.Stderr, "Use -d/--dry-run to only print without executing.\n")
+		fmt.Fprintf(os.Stderr, "Use -a/--add to add a command to the AQC file.\n")
+		fmt.Fprintf(os.Stderr, "Use -v/--version to show version.\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	// Handle -v flag: show version
+	if *showVersion {
+		printVersion()
+		return
+	}
+
+	// Handle -a flag: add command to AQC file
+	if *addAQC {
+		addCommandToAQC()
+		return
+	}
 
 	query := ""
 	if flag.NArg() > 0 {
@@ -305,4 +342,87 @@ func runCommand(cmd string) int {
 		return 1
 	}
 	return 0
+}
+
+func readLine(reader *bufio.Reader, prompt string) string {
+	fmt.Print(prompt)
+	line, _ := reader.ReadString('\n')
+	return strings.TrimSpace(line)
+}
+
+func addCommandToAQC() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	filePath := filepath.Join(cwd, aqcFileName)
+
+	// Get history and let user select a command
+	paths := detectHistoryPaths()
+	items := readHistory(paths)
+	if len(items) == 0 {
+		fmt.Fprintln(os.Stderr, "No history found.")
+		os.Exit(2)
+	}
+
+	fmt.Fprintln(os.Stderr, "Select a command to add to AQC:")
+	selected := callFzf(items, "", false)
+	if selected == "" {
+		if _, err := exec.LookPath("fzf"); err != nil {
+			fmt.Fprintln(os.Stderr, "fzf not found. Install fzf: brew install fzf")
+		}
+		os.Exit(1)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	// Show selected command and get details from user
+	fmt.Printf("\nSelected command: %s\n", selected)
+	fmt.Println("------------------------")
+
+	name := readLine(reader, "Name (short label): ")
+	if name == "" {
+		fmt.Fprintln(os.Stderr, "Name cannot be empty.")
+		os.Exit(1)
+	}
+
+	desc := readLine(reader, "Description (optional): ")
+
+	// Format the entry
+	var entry string
+	if desc != "" {
+		entry = fmt.Sprintf("%s\n- %s: %s\n---\n", selected, name, desc)
+	} else {
+		entry = fmt.Sprintf("%s\n- %s\n---\n", selected, name)
+	}
+
+	// Check if file exists, create with header if not
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		header := "# AQC Command File\n# Format:\n# command\n# - Name: Description\n# ---\n\n"
+		err = os.WriteFile(filePath, []byte(header+entry), 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating AQC file: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Created %s and added command: %s\n", aqcFileName, name)
+		return
+	}
+
+	// Append to existing file
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening AQC file: %v\n", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(entry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing to AQC file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Added command '%s' to %s\n", name, aqcFileName)
 }
