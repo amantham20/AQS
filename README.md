@@ -1,4 +1,4 @@
-# AQS — Agile Quick Search
+# AQS — Aman's Quick Search
 
 A blazing-fast CLI tool to fuzzy-search your shell command history using `fzf`. Find and re-run recent commands instantly.
 
